@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sita Esrimno</title>
+
+<style>
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #f4f6f8;
+}
+
+/* LANGUAGE SWITCH – FIXED BOTTOM RIGHT (MOST STABLE ON MOBILE) */
+#langSwitch {
+  position: fixed;
+  bottom: 16px;
+  right: 16px;
+  z-index: 9999;
+  padding: 8px 14px;
+  font-size: 14px;
+  background: #2c3e50;
+  color: white;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+/* HEADER */
+header {
+  background: #2c3e50;
+  color: white;
+  padding: 36px 15px 24px;
+  text-align: center;
+}
+
+/* SECTIONS */
+section {
+  background: white;
+  margin: 15px;
+  padding: 15px;
+  border-radius: 8px;
+}
+
+@media (min-width: 768px) {
+  section {
+    max-width: 700px;
+    margin: 20px auto;
+  }
+}
+
+/* FORMS */
+section input,
+section textarea {
+  width: 100%;
+  padding: 10px;
+  margin: 6px 0;
+}
+
+section button {
+  width: 100%;
+  padding: 10px;
+  margin: 6px 0;
+  background: #2c3e50;
+  color: white;
+  border: none;
+  border-radius: 5px;
+}
+
+/* CONTENT */
+.hidden { display: none; }
+
+#gallery {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.gallery-item {
+  text-align: center;
+}
+
+.gallery-item img {
+  max-width: 120px;
+  border-radius: 6px;
+}
+
+.delete-icon {
+  cursor: pointer;
+  font-size: 16px;
+  margin-top: 4px;
+}
+
+/* LISTS */
+.list-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* FOOTER */
+footer {
+  text-align: center;
+  padding: 15px;
+  color: #555;
+  font-size: 14px;
+}
+</style>
+</head>
+
+<body>
+
+<div id="langSwitch" onclick="toggleLang()">SV / EN</div>
+
+<header>
+  <h1 id="title">Sita Esrimno</h1>
+</header>
+
+<section id="loginSection">
+  <h2 id="loginTitle">Logga in</h2>
+  <input id="username" placeholder="Användarnamn">
+  <input id="password" type="password" placeholder="Lösenord">
+  <button onclick="login()" id="loginBtn">Logga in</button>
+</section>
+
+<section id="contentSection" class="hidden">
+
+  <h2 id="imagesTitle">Medlemsbilder</h2>
+  <input type="file" accept="image/*" capture="environment" onchange="addImage(event)">
+  <div id="gallery"></div>
+
+  <h2 id="diaryTitle">Dagbok (max 30 ord)</h2>
+  <textarea id="diaryText"></textarea>
+  <button onclick="saveDiary()" id="saveDiaryBtn">Spara</button>
+  <ul id="diaryList"></ul>
+
+  <h2 id="activityTitle">Framtida aktiviteter</h2>
+  <input id="activityInput">
+  <button onclick="addActivity()" id="addActivityBtn">Lägg till</button>
+  <ul id="activityList"></ul>
+
+  <button onclick="logout()" id="logoutBtn">Logga ut</button>
+</section>
+
+<footer>
+  Created by Jamie Salih
+</footer>
+
+<script>
+let lang = "sv";
+
+const t = {
+  sv: {
+    loginTitle: "Logga in",
+    loginBtn: "Logga in",
+    logout: "Logga ut",
+    username: "Användarnamn",
+    password: "Lösenord",
+    images: "Medlemsbilder",
+    diary: "Dagbok (max 30 ord)",
+    diaryBtn: "Spara",
+    activities: "Framtida aktiviteter",
+    activityBtn: "Lägg till",
+    errorLogin: "Fel inloggning (admin / 1234)",
+    errorDiary: "Max 30 ord"
+  },
+  en: {
+    loginTitle: "Login",
+    loginBtn: "Login",
+    logout: "Logout",
+    username: "Username",
+    password: "Password",
+    images: "Member Images",
+    diary: "Diary (max 30 words)",
+    diaryBtn: "Save",
+    activities: "Upcoming Activities",
+    activityBtn: "Add",
+    errorLogin: "Wrong login (admin / 1234)",
+    errorDiary: "Maximum 30 words"
+  }
+};
+
+function toggleLang() {
+  lang = lang === "sv" ? "en" : "sv";
+  applyLang();
+}
+
+function applyLang() {
+  loginTitle.innerText = t[lang].loginTitle;
+  loginBtn.innerText = t[lang].loginBtn;
+  logoutBtn.innerText = t[lang].logout;
+  username.placeholder = t[lang].username;
+  password.placeholder = t[lang].password;
+  imagesTitle.innerText = t[lang].images;
+  diaryTitle.innerText = t[lang].diary;
+  saveDiaryBtn.innerText = t[lang].diaryBtn;
+  activityTitle.innerText = t[lang].activities;
+  addActivityBtn.innerText = t[lang].activityBtn;
+}
+
+function login() {
+  if (username.value.trim() === "admin" && password.value.trim() === "1234") {
+    localStorage.setItem("loggedIn", "true");
+    loginSection.classList.add("hidden");
+    contentSection.classList.remove("hidden");
+    loadImages();
+    loadDiary();
+    loadActivities();
+  } else {
+    alert(t[lang].errorLogin);
+  }
+}
+
+function logout() {
+  localStorage.removeItem("loggedIn");
+  location.reload();
+}
+
+/* IMAGES */
+function addImage(e) {
+  const reader = new FileReader();
+  reader.onload = () => {
+    const images = JSON.parse(localStorage.getItem("images") || "[]");
+    images.push(reader.result);
+    localStorage.setItem("images", JSON.stringify(images));
+    loadImages();
+  };
+  reader.readAsDataURL(e.target.files[0]);
+}
+
+function loadImages() {
+  gallery.innerHTML = "";
+  const images = JSON.parse(localStorage.getItem("images") || "[]");
+  images.forEach((src, i) => {
+    gallery.innerHTML += `<div class="gallery-item">
+      <img src="${src}">
+      <span class="delete-icon" onclick="deleteImage(${i})">🗑️</span>
+    </div>`;
+  });
+}
+
+function deleteImage(i) {
+  const images = JSON.parse(localStorage.getItem("images"));
+  images.splice(i, 1);
+  localStorage.setItem("images", JSON.stringify(images));
+  loadImages();
+}
+
+/* DIARY */
+function saveDiary() {
+  const text = diaryText.value.trim();
+  if (text.split(/\s+/).length > 30) return alert(t[lang].errorDiary);
+  const diary = JSON.parse(localStorage.getItem("diary") || "[]");
+  diary.push(text);
+  localStorage.setItem("diary", JSON.stringify(diary));
+  diaryText.value = "";
+  loadDiary();
+}
+
+function loadDiary() {
+  diaryList.innerHTML = "";
+  const diary = JSON.parse(localStorage.getItem("diary") || "[]");
+  diary.forEach((d, i) => {
+    diaryList.innerHTML += `<li class="list-item">
+      <span>${d}</span>
+      <span class="delete-icon" onclick="deleteDiary(${i})">🗑️</span>
+    </li>`;
+  });
+}
+
+function deleteDiary(i) {
+  const diary = JSON.parse(localStorage.getItem("diary"));
+  diary.splice(i, 1);
+  localStorage.setItem("diary", JSON.stringify(diary));
+  loadDiary();
+}
+
+/* ACTIVITIES */
+function addActivity() {
+  const acts = JSON.parse(localStorage.getItem("activities") || "[]");
+  acts.push(activityInput.value);
+  localStorage.setItem("activities", JSON.stringify(acts));
+  activityInput.value = "";
+  loadActivities();
+}
+
+function loadActivities() {
+  activityList.innerHTML = "";
+  const acts = JSON.parse(localStorage.getItem("activities") || "[]");
+  acts.forEach((a, i) => {
+    activityList.innerHTML += `<li class="list-item">
+      <span>${a}</span>
+      <span class="delete-icon" onclick="deleteActivity(${i})">🗑️</span>
+    </li>`;
+  });
+}
+
+function deleteActivity(i) {
+  const acts = JSON.parse(localStorage.getItem("activities"));
+  acts.splice(i, 1);
+  localStorage.setItem("activities", JSON.stringify(acts));
+  loadActivities();
+}
+
+applyLang();
+</script>
+
+</body>
+</html>
